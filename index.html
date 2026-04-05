@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>교감 면접 플래시퀴즈 🎓</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: #f0f4f8; color: #2d3748; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, #1a56db, #7e3af2); color: white; padding: 20px; text-align: center; }
+  .header h1 { font-size: 1.6em; margin-bottom: 4px; }
+  .header p { font-size: 0.9em; opacity: 0.85; }
+
+  /* Stats bar */
+  .stats { display: flex; gap: 12px; padding: 14px 16px; background: white; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; align-items: center; }
+  .stat-box { background: #f7fafc; border-radius: 8px; padding: 6px 14px; font-size: 0.85em; border: 1px solid #e2e8f0; }
+  .stat-box span { font-weight: 700; color: #1a56db; }
+  .progress-bar { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; min-width: 100px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #1a56db, #7e3af2); border-radius: 4px; transition: width 0.4s; }
+
+  /* Category filter */
+  .categories { display: flex; gap: 8px; padding: 12px 16px; overflow-x: auto; background: white; border-bottom: 1px solid #e2e8f0; }
+  .cat-btn { padding: 6px 14px; border-radius: 20px; border: 2px solid #e2e8f0; background: white; cursor: pointer; font-size: 0.82em; white-space: nowrap; transition: all 0.2s; font-weight: 600; }
+  .cat-btn:hover { border-color: #1a56db; color: #1a56db; }
+  .cat-btn.active { background: #1a56db; color: white; border-color: #1a56db; }
+
+  /* Main card area */
+  .card-area { display: flex; flex-direction: column; align-items: center; padding: 24px 16px; min-height: 60vh; }
+  .card-counter { font-size: 0.85em; color: #718096; margin-bottom: 12px; }
+
+  /* Flashcard */
+  .flashcard-container { width: 100%; max-width: 680px; perspective: 1200px; cursor: pointer; margin-bottom: 20px; }
+  .flashcard { width: 100%; min-height: 220px; position: relative; transform-style: preserve-3d; transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1); }
+  .flashcard.flipped { transform: rotateY(180deg); }
+  .card-face { position: absolute; width: 100%; min-height: 220px; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 28px 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+  .card-front { background: white; border-top: 5px solid #1a56db; }
+  .card-back { background: linear-gradient(135deg, #ebf8ff, #e9d8fd); border-top: 5px solid #7e3af2; transform: rotateY(180deg); }
+  .card-label { font-size: 0.72em; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; color: #718096; }
+  .card-front .card-label { color: #1a56db; }
+  .card-back .card-label { color: #7e3af2; }
+  .card-text { font-size: 1.05em; line-height: 1.7; text-align: center; font-weight: 500; white-space: pre-line; }
+  .card-category { font-size: 0.75em; margin-top: 14px; background: #ebf8ff; color: #1a56db; padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+  .flip-hint { font-size: 0.78em; color: #a0aec0; margin-top: 10px; }
+
+  /* Control buttons */
+  .controls { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; width: 100%; max-width: 680px; margin-bottom: 16px; }
+  .btn { padding: 10px 22px; border-radius: 10px; border: none; cursor: pointer; font-size: 0.9em; font-weight: 600; transition: all 0.2s; }
+  .btn-prev { background: #e2e8f0; color: #4a5568; }
+  .btn-prev:hover { background: #cbd5e0; }
+  .btn-next { background: #1a56db; color: white; }
+  .btn-next:hover { background: #1e429f; }
+  .btn-shuffle { background: #7e3af2; color: white; }
+  .btn-shuffle:hover { background: #6c2bd9; }
+  .btn-know { background: #38a169; color: white; }
+  .btn-know:hover { background: #2f855a; }
+  .btn-review { background: #e53e3e; color: white; }
+  .btn-review:hover { background: #c53030; }
+  .btn-reset { background: #ed8936; color: white; }
+  .btn-reset:hover { background: #dd6b20; }
+
+  /* Know/Review buttons */
+  .know-controls { display: flex; gap: 10px; justify-content: center; width: 100%; max-width: 680px; margin-bottom: 10px; }
+
+  /* Mode tabs */
+  .mode-tabs { display: flex; gap: 0; background: white; border-radius: 10px; padding: 4px; margin: 12px 16px; border: 1px solid #e2e8f0; }
+  .mode-tab { flex: 1; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #718096; }
+  .mode-tab.active { background: #1a56db; color: white; }
+
+  /* Quiz mode */
+  .quiz-area { width: 100%; max-width: 680px; }
+  .quiz-question { background: white; border-radius: 16px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); border-top: 4px solid #1a56db; font-size: 1.05em; line-height: 1.7; white-space: pre-line; }
+  .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+  .quiz-option { background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 14px 18px; cursor: pointer; font-size: 0.95em; transition: all 0.2s; text-align: left; line-height: 1.5; white-space: pre-line; }
+  .quiz-option:hover:not(.disabled) { border-color: #1a56db; background: #ebf8ff; }
+  .quiz-option.correct { border-color: #38a169; background: #f0fff4; color: #276749; }
+  .quiz-option.wrong { border-color: #e53e3e; background: #fff5f5; color: #c53030; }
+  .quiz-option.disabled { cursor: default; }
+  .quiz-result { text-align: center; padding: 12px; font-weight: 700; font-size: 1em; border-radius: 10px; margin-top: 10px; }
+  .quiz-result.correct { background: #f0fff4; color: #276749; }
+  .quiz-result.wrong { background: #fff5f5; color: #c53030; }
+
+  /* Summary page */
+  .summary-page { width: 100%; max-width: 680px; background: white; border-radius: 16px; padding: 28px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; }
+  .summary-score { font-size: 3em; font-weight: 800; color: #1a56db; margin: 16px 0; }
+  .summary-grade { font-size: 1.1em; margin-bottom: 20px; }
+
+  /* Mobile */
+  @media (max-width: 480px) {
+    .card-text { font-size: 0.95em; }
+    .controls { gap: 8px; }
+    .btn { padding: 8px 14px; font-size: 0.82em; }
+    .header h1 { font-size: 1.3em; }
+  }
+
+  .hidden { display: none !important; }
+  .badge { display: inline-block; background: #1a56db; color: white; border-radius: 10px; padding: 2px 8px; font-size: 0.75em; margin-left: 6px; }
+  .badge.review { background: #e53e3e; }
+
+  /* 완료 표시 */
+  .card-status { position: absolute; top: 12px; right: 14px; font-size: 1.2em; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📚 교감 면접 플래시퀴즈</h1>
+  <p>2026년 5월 9일 시험 대비 · 경북교육청</p>
+</div>
+
+<!-- Mode tabs -->
+<div class="mode-tabs">
+  <div class="mode-tab active" onclick="setMode('flash')">📇 플래시카드</div>
+  <div class="mode-tab" onclick="setMode('quiz')">🧠 퀴즈모드</div>
+  <div class="mode-tab" onclick="setMode('review')">🔴 복습카드</div>
+</div>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat-box">전체 <span id="totalCount">0</span>문항</div>
+  <div class="stat-box">✅ 암기완료 <span id="knownCount">0</span></div>
+  <div class="stat-box">🔴 복습필요 <span id="reviewCount">0</span></div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+</div>
+
+<!-- Category filter -->
+<div class="categories" id="categoryBar"></div>
+
+<!-- Flash card mode -->
+<div class="card-area" id="flashMode">
+  <div class="card-counter" id="cardCounter"></div>
+  <div class="flashcard-container" onclick="flipCard()">
+    <div class="flashcard" id="flashcard">
+      <div class="card-face card-front">
+        <div class="card-label">❓ 문제</div>
+        <div class="card-text" id="cardQuestion"></div>
+        <div class="card-category" id="cardCat"></div>
+        <div class="card-status" id="cardStatus"></div>
+        <div class="flip-hint">👆 클릭하면 답 확인</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-label">✅ 정답 / 핵심내용</div>
+        <div class="card-text" id="cardAnswer"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="know-controls">
+    <button class="btn btn-know" onclick="markKnown()">✅ 암기완료</button>
+    <button class="btn btn-review" onclick="markReview()">🔴 복습필요</button>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-prev" onclick="prevCard()">◀ 이전</button>
+    <button class="btn btn-shuffle" onclick="shuffleCards()">🔀 섞기</button>
+    <button class="btn btn-next" onclick="nextCard()">다음 ▶</button>
+  </div>
+</div>
+
+<!-- Quiz mode -->
+<div class="card-area hidden" id="quizMode">
+  <div class="quiz-area" id="quizArea"></div>
+  <div class="controls">
+    <button class="btn btn-next" onclick="nextQuiz()">다음 문제 ▶</button>
+    <button class="btn btn-reset" onclick="resetQuiz()">🔄 처음부터</button>
+  </div>
+</div>
+
+<!-- Review mode -->
+<div class="card-area hidden" id="reviewMode">
+  <div style="text-align:center; color: #718096; padding: 20px; font-size:0.95em;" id="reviewEmpty"></div>
+  <div class="card-counter" id="reviewCounter"></div>
+  <div class="flashcard-container" onclick="flipReview()">
+    <div class="flashcard" id="reviewCard">
+      <div class="card-face card-front" style="border-top-color: #e53e3e;">
+        <div class="card-label" style="color:#e53e3e;">🔴 복습 필요</div>
+        <div class="card-text" id="reviewQuestion"></div>
+        <div class="card-category" id="reviewCat"></div>
+        <div class="flip-hint">👆 클릭하면 답 확인</div>
+      </div>
+      <div class="card-face card-back">
+        <div class="card-label">✅ 정답 / 핵심내용</div>
+        <div class="card-text" id="reviewAnswer"></div>
+      </div>
+    </div>
+  </div>
+  <div class="know-controls">
+    <button class="btn btn-know" onclick="markReviewKnown()">✅ 이제 알겠어요!</button>
+  </div>
+  <div class="controls">
+    <button class="btn btn-prev" onclick="prevReview()">◀ 이전</button>
+    <button class="btn btn-next" onclick="nextReview()">다음 ▶</button>
+  </div>
+</div>
+
+<script>
+const ALL_CARDS = [
+  // ===== 교육시책 =====
+  {
+    q: "경북교육의 비전은?",
+    a: "삶의 힘을 키우는 따뜻한 경북교육",
+    cat: "교육시책"
+  },
+  {
+    q: "경북교육 3대 지표는?",
+    a: "① 성장하는 나\n② 조화로운 우리\n③ 함께 여는 미래",
+    cat: "교육시책"
+  },
+  {
+    q: "따뜻한 경북교육 4대 정책 방향은?",
+    a: "① 삶이 있는 교육과정\n② 힘이 되는 미래교육\n③ 따뜻함을 더하는 학교\n④ 혁신하는 교육지원",
+    cat: "교육시책"
+  },
+  {
+    q: "경북교육 핵심 추진 과제 4가지는?",
+    a: "① 삶이 있는 교육과정으로 학습자 주도성을 키웁니다\n② 힘이 되는 미래교육으로 미래를 변혁합니다\n③ 따뜻함을 더하는 학교에서 모두의 완전한 포용을 실천합니다\n④ 혁신하는 교육지원으로 자생력 있는 학교를 만들어 갑니다",
+    cat: "교육시책"
+  },
+  {
+    q: "'삶의 힘'이란 무엇인가?",
+    a: "자기 삶의 주인으로서 세상에 도전하여 꿈을 실현하고 사회 발전에 이바지하는 역량",
+    cat: "교육시책"
+  },
+  {
+    q: "경북교육에서 '따뜻함'이란?",
+    a: "한 아이도 포기하지 않고 행복하게 보살피겠다는 경북교육의 핵심 가치",
+    cat: "교육시책"
+  },
+
+  // ===== 2022 개정교육과정 =====
+  {
+    q: "2022 개정교육과정 비전은?",
+    a: "포용성과 창의성을 갖춘 주도적인 사람",
+    cat: "2022개정교육과정"
+  },
+  {
+    q: "2022 개정교육과정 4가지 인간상은?\n(암기법: 자창교더)",
+    a: "① 자기주도적인 사람\n② 창의적인 사람\n③ 교양있는 사람\n④ 더불어 사는 사람",
+    cat: "2022개정교육과정"
+  },
+  {
+    q: "2022 개정교육과정 6가지 핵심역량은?\n(암기법: 창공협지심자)",
+    a: "① 창의적 사고 역량\n② 공동체 역량\n③ 협력적 소통 역량\n④ 지식정보처리 역량\n⑤ 심미적 감성 역량\n⑥ 자기관리 역량",
+    cat: "2022개정교육과정"
+  },
+  {
+    q: "2022 개정교육과정 4대 개정 방향은?",
+    a: "① 미래사회에 대응할 수 있는 역량 함양 (기초소양: 언어·수리·디지털)\n② 학습자 맞춤형 교육 강화\n③ 현장의 자율적 혁신 지원 (교과·창체 20% 시수 증감)\n④ 디지털 교육환경 변화 대응 지원",
+    cat: "2022개정교육과정"
+  },
+  {
+    q: "2022 개정교육과정 초등학교 주요 변화는?",
+    a: "① 국어 시수 34시간 증가 (한글 해득 교육 강화)\n② 정보교육 17→34차시 확대\n③ 통합교과(바슬즐)로 안전교육 재구조화\n④ 학교자율시간 도입\n⑤ 초6-2학기 진로연계교육 도입",
+    cat: "2022개정교육과정"
+  },
+  {
+    q: "학교자율시간이란?",
+    a: "지역·학교 여건 및 학생 필요에 따라 새로운 과목·활동을 편성·운영할 수 있는 시간\n(학년별 선택과목 2개 이내, 3~6학년 총 8개 과목)",
+    cat: "2022개정교육과정"
+  },
+  {
+    q: "'깊이 있는 학습'이란? (2022 개정교육과정)",
+    a: "핵심 아이디어를 중심으로 학습 요소들을 유기적으로 연계하여 학습 경험의 폭과 깊이를 확장하는 학습\n→ 교과 간 연계·통합 + 삶과 연계한 학습 + 학습 과정에 대한 성찰",
+    cat: "2022개정교육과정"
+  },
+  {
+    q: "창의적 체험활동 영역 변화는? (2015→2022)",
+    a: "• 2015: 4개 영역 (자율·동아리·봉사·진로)\n• 2022: 3개 영역 (자율자치활동·동아리활동·진로활동)\n→ 봉사활동은 동아리활동 영역에 편성, 탄력적 연계 통합 운영",
+    cat: "2022개정교육과정"
+  },
+
+  // ===== 미래형교육과정 9대 과제 =====
+  {
+    q: "미래형(초등 학생중심) 교육과정 9대 과제는?",
+    a: "【미래형 학교 교육과정 운영】\n① 역량함양 교육과정 운영\n② 학생중심 교육과정 운영\n③ 경북형 공동교육과정 운영\n【미래역량 수업 확산】\n④ 학생 주도형 수업 정착\n⑤ 학생 성장 지원 중심 평가 및 환류\n⑥ 에듀테크 활용 수업 내실화\n【미래교육환경 변화 대응】\n⑦ 교육과정 운영 역량 강화\n⑧ 교육과정 중심 학교 자율경영 구현\n⑨ 협력적 학습 생태계 구축",
+    cat: "교육과정장학"
+  },
+
+  // ===== 학생주도형 수업 =====
+  {
+    q: "학생 주도형 수업 정착을 위한 교감의 역할 3가지는?",
+    a: "① 1-1-1 프로젝트 실천 지원 (1교사 1프로젝트 1발표)\n② 토의·토론 수업 확대 지원\n③ 교사-학생 공동 설계 수업 실천 독려\n(+ 질문이 넘치는 교실 문화 정착)",
+    cat: "교육과정장학"
+  },
+  {
+    q: "'질문이 넘치는 교실' 4가지 추진 과제는?",
+    a: "① 질문하는 학교 문화 조성\n② 질문 능력 신장\n③ 질문기반 수업 실천\n④ 질문기반 수업 나눔 확산",
+    cat: "교육과정장학"
+  },
+  {
+    q: "질문의 3가지 유형은?",
+    a: "① 사실적 질문(바탕 질문): 사실을 확인하고 이해하는 질문\n② 해석적 질문(궁금 질문): 왜 그런지 질문하여 정보에 다양한 생각 추가\n③ 적용적 질문(새롬 질문): 나만의 아이디어를 도출·발전시키는 질문",
+    cat: "교육과정장학"
+  },
+  {
+    q: "경북학생성장지원 평가제도(아우름 평가)의 방향은?",
+    a: "• 하나의 검사로 성취도·기초학력 진단·보정지도까지 통합 지원\n• 대상: 초3~고2 (초3, 중1 필수 실시)\n• 방법: 컴퓨터 기반 평가(CBT), 초3은 지필 가능",
+    cat: "교육과정장학"
+  },
+
+  // ===== 기초학력 =====
+  {
+    q: "기초학력 3단계 안전망이란?",
+    a: "1단계: 담임교사 학습지원 (교실 안 지원)\n2단계: 학습지원 담당교원 지원 (학교 안 지원)\n3단계: 교육청·전문기관 연계 지원 (학교 밖 지원)",
+    cat: "교육과정장학"
+  },
+  {
+    q: "학교에서 기초학력 지도방법 3가지는? (기출 반복)",
+    a: "① 기초학력 진단-보정시스템 활용한 맞춤형 지도\n② 담임교사 학습지원 강화 (두드림학교 운영)\n③ 학습지원 담당교원 및 지원인력 전문성 강화\n(+ 방과후 보충 프로그램, 튜터링 사업 활용)",
+    cat: "교육과정장학"
+  },
+
+  // ===== 늘봄학교 =====
+  {
+    q: "늘봄학교 운영 방식 2가지는?",
+    a: "① 맞춤형 프로그램: 초1~2학년 대상\n② 선택형 교육프로그램: 초1~6학년 대상",
+    cat: "교육과정장학"
+  },
+  {
+    q: "늘봄학교 정착을 위한 교감의 역할 3가지는? (2024 기출)",
+    a: "① 늘봄 전담 인력 배치 및 업무 지원\n② 안전관리 체계 구축 (돌봄실 안전점검)\n③ 학부모 소통 및 프로그램 수요 파악\n(+ 지역 연계 기관과 협력 강화)",
+    cat: "교육과정장학"
+  },
+
+  // ===== 학교급 간 전환기 교육 =====
+  {
+    q: "학교급 간 전환기 교육 3단계 사례는? (2024 기출)",
+    a: "① 유→초 이음: 1학년 1학기 놀이수업학기제 운영\n② 초→중 전환: 6학년 2학기 진로교육 집중학기제, '중학교 가는 길' 개발·보급\n③ 중→고 전환: 3학년 2학기 진로연계교육 집중, '고등학교 가는 길' 개발·보급",
+    cat: "교육과정장학"
+  },
+  {
+    q: "1학년 1학기 놀이수업학기제의 목적은?",
+    a: "유치원 누리과정과 연계하여 학생의 발달적 특성을 고려한 놀이 중심 교육과정 운영\n→ 한글 깨치기, 기초학습 토대 마련, 학교생활 이해를 위한 심리·정서적 도움 제공",
+    cat: "교육과정장학"
+  },
+
+  // ===== 교권보호 =====
+  {
+    q: "교육활동 보호책임관으로서 교감의 역할 3가지는? (2024 기출)",
+    a: "① 교육활동 침해 예방 교육 실시 및 학교 내 문화 조성\n② 침해 발생 시 즉각 대응 (피해 교원 보호조치, 수업 교체 등)\n③ 교육활동보호위원회 운영 지원 및 교원 법률 지원 연계",
+    cat: "교권·생활지도"
+  },
+  {
+    q: "교원이 아동학대로 신고된 경우 유의사항은?",
+    a: "• 정당한 생활지도는 신체적·정서적 학대로 보지 않는다\n• 보호자가 교직원의 인권을 침해하는 행위는 금지\n• 즉시 교육활동보호위원회 개최, 피해 교원 보호\n• 교원 지위법에 따른 법률 지원 요청 가능",
+    cat: "교권·생활지도"
+  },
+  {
+    q: "학교폭력 학교장 자체해결(종결) 요건 3가지는? (2021 기출)",
+    a: "① 2주 미만의 신체적·정신적 피해\n② 재산상 피해가 없거나 복구된 경우\n③ 학교폭력이 지속적이지 않은 경우\n④ 학교폭력 가담에 고의·반복성이 없는 경우\n(→ 피해 학생 및 학부모가 자체해결에 동의해야 함)",
+    cat: "교권·생활지도"
+  },
+  {
+    q: "학교폭력 관계회복(회복적 프로그램) 운영 시 유의사항 3가지는? (2025 기출)",
+    a: "① 학생뿐 아니라 학부모 관계회복도 필요\n② 어느 한쪽에도 치우치지 않는 중립적 진행\n③ 위클래스 등 전문 상담사 활용\n④ 강요 없이 자발적 참여 원칙",
+    cat: "교권·생활지도"
+  },
+  {
+    q: "아동학대 신고해야 할 경우 3가지는? (2022 기출)",
+    a: "① 신체적 학대: 폭행, 체벌 등\n② 정서적 학대: 언어폭력, 무시, 고립 등\n③ 방임: 기본적 보호·양육·교육 태만\n④ 성적 학대: 성폭력, 성희롱 등\n(→ 신고의무자: 교원은 의무적으로 즉시 신고)",
+    cat: "교권·생활지도"
+  },
+  {
+    q: "딥페이크 성범죄 예방을 위한 학교의 지도방안 및 발생 시 대처요령은? (2025 기출)",
+    a: "【예방】\n① 디지털 성범죄 예방 교육 실시\n② 사진·영상 공유에 대한 동의 교육\n③ 온라인 그루밍 위험성 교육\n【발생 시】\n① 피해 학생 심리 지원(위클래스 연계)\n② 증거 보전 후 경찰 신고\n③ 방송통신위원회 삭제 요청",
+    cat: "교권·생활지도"
+  },
+
+  // ===== 인사·복무 =====
+  {
+    q: "직권 휴직의 종류는?",
+    a: "① 질병 휴직\n② 병역 휴직\n③ 생사불명 휴직\n④ 법정의무수행 휴직\n⑤ 노조전임자 휴직",
+    cat: "인사·복무"
+  },
+  {
+    q: "봉급이 지급되지 않는 휴직 3가지는? (2025 기출)",
+    a: "① 가족돌봄휴직\n② 자기개발휴직(연수휴직)\n③ 유학휴직\n(→ 육아휴직은 18개월까지 수당 지급)",
+    cat: "인사·복무"
+  },
+  {
+    q: "육아휴직 관련 최근 개정 사항은?",
+    a: "• 육아휴직 수당: 18개월까지 지급 (확대)\n• 승급 기간 산입\n• 같은 자녀에 대해 부모 모두 각각 3개월 이상 사용 시 혜택\n• 한부모·장애자녀 보호자도 확대 적용",
+    cat: "인사·복무"
+  },
+  {
+    q: "배우자 출산휴가 개정 내용은?",
+    a: "• 일수: 10일(다태아 15일) → 20일(다태아 25일)\n• 범위: 출산일부터 120일(다태아 150일)\n• 분할 사용: 3회 (다태아 5회)",
+    cat: "인사·복무"
+  },
+  {
+    q: "육아시간 적용 기준은?",
+    a: "• 대상: 만 8세 또는 초2 이하 자녀\n• 기간: 36개월 범위\n• 시간: 1일 2시간\n• 사용일에도 시간외 근무 가능",
+    cat: "인사·복무"
+  },
+  {
+    q: "가족돌봄휴가 관련 변경사항은?",
+    a: "자녀돌봄 3일 → 가족돌봄 10일로 확대\n(유급 / 서류: 가족관계증명서, 진단서 등 3가지 제출)",
+    cat: "인사·복무"
+  },
+  {
+    q: "가족돌봄휴가(유급) 신청 시 필요한 서류 3가지는? (2024 기출)",
+    a: "① 가족관계증명서\n② 의사 진단서 또는 입원확인서\n③ 가족돌봄휴가 신청서\n(→ 실제 돌봄이 필요함을 증명하는 서류)",
+    cat: "인사·복무"
+  },
+  {
+    q: "공가 사유 3가지 이상은? (2014, 2017 기출)",
+    a: "① 병역 관련 검사·훈련\n② 각종 선거(선거권 행사)\n③ 천재지변·재해\n④ 법정의무수행 (국민참여재판 등)\n⑤ 공무상 질병 치료\n⑥ 예비군 훈련",
+    cat: "인사·복무"
+  },
+  {
+    q: "수업일에 연가를 쓸 수 있는 사유는? (2019 기출)",
+    a: "① 본인 또는 가족의 결혼\n② 가족의 사망(조사)\n③ 본인 또는 가족의 입원 수술\n④ 천재지변 등 불가피한 사유\n(→ 원칙적으로 수업일 연가는 제한, 교감·교장 허가 필요)",
+    cat: "인사·복무"
+  },
+  {
+    q: "계약제 교원 채용공고 생략 가능한 경우는?",
+    a: "① 경북교육청 기간제교사 인력풀 등록자 – 6개월 미만 임용\n② 인력풀 등록된 재직 교사를 동일 학교에서 단절 없이 재임용\n③ 단기간 결원 발생(1개월 미만)",
+    cat: "인사·복무"
+  },
+  {
+    q: "기간제교원 결격사유·범죄경력조회 생략 가능한 경우는?",
+    a: "① 임용기간 종료 후 경력단절 없이 다른 학교에 임용되는 경우 (1년 경과 시 재실시)\n② 임용기간 종료 후 경력단절 없이 동일 학교에 재임용되는 경우",
+    cat: "인사·복무"
+  },
+  {
+    q: "기간제교원 채용 시 교감의 역할·확인사항은? (2023 기출)",
+    a: "① 자격증·학력·경력 증빙서류 확인\n② 결격사유 및 범죄경력 조회\n③ 채용 공정성 확보 (공개 경쟁 원칙)\n④ 임용 전 NEIS 등록 및 계약서 작성",
+    cat: "인사·복무"
+  },
+  {
+    q: "원격근무제 시간단위 사용 시 유의점은? (2025 기출)",
+    a: "① 수업이 없는 날/시간에만 사용 가능\n② 학생 안전 및 교육활동 공백 방지\n③ 단위학교별 탄력적 근무시간제와 연계 운영\n④ 학교 특성 고려하여 운영 계획 수립",
+    cat: "인사·복무"
+  },
+
+  // ===== 학교운영 =====
+  {
+    q: "학교운영위원회 심의 사항 5가지는? (2015 기출)",
+    a: "① 학교헌장·학칙의 제정 또는 개정\n② 학교 예산안과 결산\n③ 교과서·교육자료의 선정\n④ 교복·졸업앨범·체육복 등 학부모 경비 부담 사항\n⑤ 방과후 활동·교육활동·수련활동 등",
+    cat: "학교운영"
+  },
+  {
+    q: "학교운영위원회 의결 사항은?",
+    a: "① 학교발전기금의 조성 및 운용\n② 학교발전기금의 사용\n(→ 심의와 의결 구분 중요!)",
+    cat: "학교운영"
+  },
+  {
+    q: "학교업무정상화를 위한 교감의 역할은?",
+    a: "① 교육활동 중심 학교조직 재구조화\n② 교육행정지원팀 운영\n③ 담임교사 행정업무 최소화\n④ 업무처리 절차 간소화\n⑤ 각종 위원회 및 장부 정비",
+    cat: "학교운영"
+  },
+  {
+    q: "학교업무정상화 '3운동'은?",
+    a: "나눔 운동 + 협업 운동 + 참여 운동\n(+ 업무배송서비스, 인생도서관 등 지원)",
+    cat: "학교운영"
+  },
+  {
+    q: "정보공개청구 처리 절차 및 유의점은? (2025 기출)",
+    a: "① 접수 → 담당자 배정 → 처리(10일 이내) → 공개 결정/비공개 결정 → 통보\n② 비공개 정보: 개인정보, 진행 중인 수사 정보 등\n③ 이의신청 가능 기간: 결정 통보 후 30일 이내",
+    cat: "학교운영"
+  },
+  {
+    q: "학교장 비밀전학의 처리절차 및 유의점은? (2025 기출)",
+    a: "① 학교폭력·가정폭력 피해 학생 대상\n② 피해 학생 또는 보호자 신청\n③ 전 학교→교육지원청→전입 학교 순 절차\n④ 전출 학교 정보 비공개 유지\n⑤ 생활기록부에 전학 사유 기재 최소화",
+    cat: "학교운영"
+  },
+
+  // ===== 다문화·이주배경 =====
+  {
+    q: "이주배경학생(다문화) 지원을 위한 제도 및 학교의 역할은? (2025 기출)",
+    a: "【제도】\n① 학생맞춤통합지원체계 활용\n② 다문화교육 기본계획 시행\n③ 한국어학급(KSL) 운영\n【학교 역할】\n① 업무담당자 학생 지원 계획 마련\n② 학습·정서·역량 진단 지원\n③ 지역사회 연계 후속 지원 지속",
+    cat: "학교운영"
+  },
+
+  // ===== 학령인구 감소 =====
+  {
+    q: "학령인구 감소에 대비한 학교교육경쟁력 강화 방안 3가지는? (2025 기출)",
+    a: "① 작은학교 성장 프로그램 운영\n② 소규모학교 네트워크 환경 구축\n③ 늘봄학교 활성화\n④ 경북형 공동교육과정 운영 강화\n⑤ 다자녀 가정 교육 인센티브 제공",
+    cat: "학교운영"
+  },
+
+  // ===== 안전 =====
+  {
+    q: "학교안전강화 시스템 3가지는? (2023, 2024 기출)",
+    a: "① 학교 안전교육 의무화 및 7대 영역 실시\n② CCTV 확대·고도화 및 원격 모니터링\n③ 학교안전공제회 활용 (사고 발생 시 보상)\n④ 바로지원 365 신속대응팀 운영",
+    cat: "학교운영"
+  },
+  {
+    q: "자연재해(산불·지진·태풍) 학교안전관리대책 및 위기 대응 절차는? (2025 기출)",
+    a: "【대책】\n① 학교안전계획 수립 및 정기 훈련\n② 재난 유형별 매뉴얼 비치·숙지\n③ 비상연락망 구축\n【절차】\n① 위기 상황 감지 → ② 교장 보고 및 교육청 보고 → ③ 학생 대피 → ④ 학부모 연락 → ⑤ 사후 지원",
+    cat: "학교운영"
+  },
+  {
+    q: "학생맞춤통합지원 체계 사업이란? (2025 기출)",
+    a: "학습·심리·정서·복지 등 다양한 어려움을 가진 학생을 통합적으로 지원하는 체계\n① 학교 내 지원팀 구성\n② 지역 전문기관 연계\n③ 학생 맞춤형 지원 계획 수립 및 이행 관리",
+    cat: "학교운영"
+  },
+  {
+    q: "학생 마음건강 위기지원 프로젝트 HOPE란? (2025 기출)",
+    a: "위기 학생의 마음건강을 조기에 발견하고 지원하는 프로젝트\n① 위기학생 조기 발견 (마음건강 체크리스트)\n② 위클래스 상담 연계\n③ 외부 전문기관(청소년상담복지센터 등) 연계\n④ 마음건강 안심온 플랫폼 활용",
+    cat: "학교운영"
+  },
+
+  // ===== 갈등 상황 =====
+  {
+    q: "교직원 간 갈등 발생 시 교감의 역할은?",
+    a: "① 당사자 개별 면담을 통한 입장 파악\n② 중립적 조정자 역할\n③ 갈등 원인 분석 및 해결책 모색\n④ 학교 규정·절차에 따른 처리\n⑤ 필요 시 교장 보고 및 교육청 지원 요청",
+    cat: "교감역할"
+  },
+  {
+    q: "프로젝트 수업 VS 교과서 수업 갈등 시 교감의 역할은? (2022 기출)",
+    a: "① 교사·학부모 각각 개별 면담으로 입장 청취\n② 교육과정 운영의 교사 전문성 인정·지지\n③ 학부모에게 프로젝트 수업의 교육적 가치 설명\n④ 수업 공개·참관 기회 제공\n⑤ 학교 교육과정 위원회에서 논의",
+    cat: "교감역할"
+  },
+  {
+    q: "현장체험학습 실시 여부 갈등 시 교감의 역할은? (2025 기출)",
+    a: "① 학부모·교사 의견을 균형 있게 청취\n② 학교운영위원회에서 민주적 절차로 결정\n③ 안전기준 충족 여부를 객관적으로 검토\n④ 결정 후 모든 구성원에게 투명하게 안내",
+    cat: "교감역할"
+  },
+
+  // ===== IB·경북특화 =====
+  {
+    q: "경북형 국제바칼로레아(IB) 교육 정책의 핵심 방향은?",
+    a: "① 탐구 중심의 개념 기반 교육과정 운영\n② 논술형·서술형 평가 체계 구축\n③ 경북형 IB 인증 학교 확대\n④ 교원 IB 연수 및 역량 강화\n(→ 2026년 경북형 IB 추진 계획 수립)",
+    cat: "교육과정장학"
+  },
+
+  // ===== 디지털·AI =====
+  {
+    q: "디지털 전환을 통한 학교업무 효율화 방안은? (2025 기출)",
+    a: "① e-나라도움, 에듀파인 등 디지털 행정 시스템 활용\n② 인공지능 기반 학습 분석 시스템 도입\n③ 교무 업무 클라우드화 및 페이퍼리스 추진\n④ 바로지원 365 신속대응팀 운영\n⑤ 디지털 소통 플랫폼 활용",
+    cat: "교육과정장학"
+  },
+
+  // ===== 생활기록부 =====
+  {
+    q: "생활기록부 기재요령 최근 변경 사항은? (2025 기출)",
+    a: "① 수상 경력: 교내 수상만 기재 (교외 수상 삭제)\n② 독서 활동: 책 제목·저자만 기재\n③ 자율·동아리 활동: 학생 특기사항 500자 이내\n④ 진로 활동: 자신의 진로와 관련된 활동 기재\n⑤ 행동 특성·종합의견: 학급 담임 중심 기재",
+    cat: "학교운영"
+  },
+
+  // ===== 2025년 면접 예상 =====
+  {
+    q: "2025 실제 면접 기출 5문항은?",
+    a: "1. 학령인구 감소 대비 학교교육경쟁력 강화 3가지\n2. 학생주도형 수업을 위한 교감 역할 3가지\n3. 이주배경학생 지원 방안 3가지\n4. 학교폭력 관계회복 프로그램 운영 유의사항 3가지\n5. 봉급이 지급되지 않는 휴직 3가지",
+    cat: "기출문제"
+  },
+  {
+    q: "2024 실제 면접 기출 5문항은?",
+    a: "1. 늘봄학교 정착을 위한 교감의 역할 3가지\n2. 교육활동 보호책임관으로서 교감의 역할 3가지\n3. 학교안전강화 시스템 3가지\n4. 학교급 간 전환기 진로연계교육 사례 3가지\n5. 가족돌봄휴가(유급) 신청 필요 서류 3가지",
+    cat: "기출문제"
+  },
+  {
+    q: "2023 실제 면접 기출 5문항은?",
+    a: "1. 코로나 교육회복 추진과제\n2. 핵심역량 강화 교육과정 운영을 위한 교감의 역할\n3. 현장체험학습 실시 점검사항 3가지 이상\n4. 기간제교사 채용 과정 및 확인사항\n5. 학교안전강화 시스템",
+    cat: "기출문제"
+  },
+  {
+    q: "2022 면접 기출 5문항은?",
+    a: "1. 교육회복 중 학습지원 방안 3가지\n2. 미래형 교육과정 9대 과제 중심 교육과정 편성 시 교감의 지원·점검 내용 3가지\n3. 프로젝트 수업 vs 교과서 수업 학부모 갈등 시 교감의 역할 3가지\n4. 아동학대 신고해야 할 경우 3가지\n5. 시간선택제 교사 전환 시 사유 3가지",
+    cat: "기출문제"
+  },
+  {
+    q: "2021 면접 기출 5문항은?",
+    a: "1. 학교지원센터 학교지원 내용 3가지\n2. 기초학력 학교 지원방안 3가지\n3. 놀이중심 교육과정 운영 교감이 지원할 수 있는 일 3가지\n4. 학폭 학교장 종결 자체해결 요건 3가지\n5. 계약제 교원 계약 해지 사유 3가지",
+    cat: "기출문제"
+  },
+  {
+    q: "면접 당일 절차는?",
+    a: "인재관 도착(08:00) → 1층 면접실 확인/등록 → 2층 강당 대기 → 고사장별 순서 추첨 → 면접 시행\n\n【면접 순서】\n면접자 호명 → 대기석 대기 → 구상실 이동 → 구상 5분(키워드 작성) → 면접실 이동 → 면접 5분",
+    cat: "기출문제"
+  },
+  {
+    q: "면접 합격 기준과 핵심 전략은?",
+    a: "• 60점 이상 합격 / 50~60점 재시험\n• 문항별 20점 × 5문항\n\n【핵심 전략】\n→ 2개 완벽보다 5개 모두 답변이 유리!\n→ 구상실에서 5분 동안 키워드 위주로 메모\n→ 문항은 3~4줄 (주요 내용은 굵게 표시됨)\n→ 모르면 '학생·학부모·지역사회' 3요소로 조합",
+    cat: "기출문제"
+  },
+
+  // ===== 2026 예상 출제 =====
+  {
+    q: "2026년 예상 출제 주제 (최신 이슈)는?",
+    a: "① 2022 개정교육과정 현장 안착 방안\n② AI·디지털 전환 교육\n③ 학령인구 감소 대응\n④ 이주배경학생 통합지원\n⑤ 교권보호 및 생활지도\n⑥ 기초학력 보장\n⑦ 늘봄학교 안착\n⑧ 학교폭력·관계회복\n⑨ 인사·복무 최신 변경사항\n⑩ 경북형 IB 교육",
+    cat: "기출문제"
+  }
+];
+
+// State
+let currentCards = [...ALL_CARDS];
+let currentIndex = 0;
+let knownSet = new Set(JSON.parse(localStorage.getItem('knownCards') || '[]'));
+let reviewSet = new Set(JSON.parse(localStorage.getItem('reviewCards') || '[]'));
+let currentCat = 'all';
+let isFlipped = false;
+let currentMode = 'flash';
+
+// Quiz state
+let quizCards = [];
+let quizIndex = 0;
+let quizScore = 0;
+let quizAnswered = false;
+
+// Review state
+let reviewCards = [];
+let reviewIndex = 0;
+let isReviewFlipped = false;
+
+const categories = ['all', ...new Set(ALL_CARDS.map(c => c.cat))];
+
+function init() {
+  // Build category buttons
+  const bar = document.getElementById('categoryBar');
+  categories.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn' + (cat === 'all' ? ' active' : '');
+    const count = cat === 'all' ? ALL_CARDS.length : ALL_CARDS.filter(c => c.cat === cat).length;
+    btn.textContent = (cat === 'all' ? '전체' : cat) + ` (${count})`;
+    btn.onclick = () => selectCategory(cat);
+    bar.appendChild(btn);
+  });
+
+  filterCards();
+  updateStats();
+}
+
+function selectCategory(cat) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-btn').forEach((b, i) => {
+    b.classList.toggle('active', categories[i] === cat);
+  });
+  filterCards();
+}
+
+function filterCards() {
+  if (currentCat === 'all') {
+    currentCards = [...ALL_CARDS];
+  } else {
+    currentCards = ALL_CARDS.filter(c => c.cat === currentCat);
+  }
+  currentIndex = 0;
+  isFlipped = false;
+  showCard();
+}
+
+function showCard() {
+  if (currentCards.length === 0) return;
+  const card = currentCards[currentIndex];
+  document.getElementById('cardQuestion').textContent = card.q;
+  document.getElementById('cardAnswer').textContent = card.a;
+  document.getElementById('cardCat').textContent = card.cat;
+  document.getElementById('cardCounter').textContent = `${currentIndex + 1} / ${currentCards.length}`;
+
+  const idx = ALL_CARDS.indexOf(card);
+  const status = document.getElementById('cardStatus');
+  if (knownSet.has(idx)) status.textContent = '✅';
+  else if (reviewSet.has(idx)) status.textContent = '🔴';
+  else status.textContent = '';
+
+  const fc = document.getElementById('flashcard');
+  fc.classList.remove('flipped');
+  isFlipped = false;
+}
+
+function flipCard() {
+  const fc = document.getElementById('flashcard');
+  isFlipped = !isFlipped;
+  fc.classList.toggle('flipped', isFlipped);
+}
+
+function nextCard() {
+  currentIndex = (currentIndex + 1) % currentCards.length;
+  showCard();
+}
+
+function prevCard() {
+  currentIndex = (currentIndex - 1 + currentCards.length) % currentCards.length;
+  showCard();
+}
+
+function shuffleCards() {
+  for (let i = currentCards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [currentCards[i], currentCards[j]] = [currentCards[j], currentCards[i]];
+  }
+  currentIndex = 0;
+  showCard();
+}
+
+function markKnown() {
+  const card = currentCards[currentIndex];
+  const idx = ALL_CARDS.indexOf(card);
+  knownSet.add(idx);
+  reviewSet.delete(idx);
+  saveProgress();
+  updateStats();
+  showCard();
+  nextCard();
+}
+
+function markReview() {
+  const card = currentCards[currentIndex];
+  const idx = ALL_CARDS.indexOf(card);
+  reviewSet.add(idx);
+  knownSet.delete(idx);
+  saveProgress();
+  updateStats();
+  showCard();
+  nextCard();
+}
+
+function saveProgress() {
+  localStorage.setItem('knownCards', JSON.stringify([...knownSet]));
+  localStorage.setItem('reviewCards', JSON.stringify([...reviewSet]));
+}
+
+function updateStats() {
+  document.getElementById('totalCount').textContent = ALL_CARDS.length;
+  document.getElementById('knownCount').textContent = knownSet.size;
+  document.getElementById('reviewCount').textContent = reviewSet.size;
+  const pct = Math.round(knownSet.size / ALL_CARDS.length * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+// ===== QUIZ MODE =====
+function initQuiz() {
+  quizCards = [...currentCards].sort(() => Math.random() - 0.5).slice(0, Math.min(10, currentCards.length));
+  quizIndex = 0;
+  quizScore = 0;
+  showQuizQuestion();
+}
+
+function showQuizQuestion() {
+  const area = document.getElementById('quizArea');
+  if (quizIndex >= quizCards.length) {
+    showQuizSummary();
+    return;
+  }
+  const card = quizCards[quizIndex];
+  quizAnswered = false;
+
+  // Generate wrong answers from other cards
+  const others = ALL_CARDS.filter(c => c !== card).sort(() => Math.random() - 0.5).slice(0, 3);
+  const options = [card, ...others].sort(() => Math.random() - 0.5);
+
+  area.innerHTML = `
+    <div class="quiz-question"><strong>Q${quizIndex + 1}/${quizCards.length}.</strong> ${card.q}</div>
+    <div class="quiz-options">
+      ${options.map((opt, i) => `
+        <button class="quiz-option" onclick="checkAnswer(${i}, ${options.indexOf(card)}, this)">
+          ${String.fromCharCode(9312 + i)} ${opt.a.substring(0, 120)}${opt.a.length > 120 ? '...' : ''}
+        </button>
+      `).join('')}
+    </div>
+    <div id="quizResultMsg"></div>
+  `;
+}
+
+function checkAnswer(selected, correct, btn) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  const options = document.querySelectorAll('.quiz-option');
+  options.forEach((opt, i) => {
+    opt.classList.add('disabled');
+    if (i === correct) opt.classList.add('correct');
+    if (i === selected && selected !== correct) opt.classList.add('wrong');
+  });
+  const msg = document.getElementById('quizResultMsg');
+  if (selected === correct) {
+    quizScore++;
+    msg.className = 'quiz-result correct';
+    msg.textContent = '✅ 정답입니다!';
+  } else {
+    msg.className = 'quiz-result wrong';
+    msg.textContent = '❌ 오답! 정답을 확인하세요.';
+  }
+}
+
+function nextQuiz() {
+  quizIndex++;
+  showQuizQuestion();
+}
+
+function resetQuiz() {
+  initQuiz();
+}
+
+function showQuizSummary() {
+  const pct = Math.round(quizScore / quizCards.length * 100);
+  const grade = pct >= 80 ? '🏆 합격권!' : pct >= 60 ? '📚 조금 더 노력하세요' : '🔄 복습이 필요합니다';
+  document.getElementById('quizArea').innerHTML = `
+    <div class="summary-page">
+      <div style="font-size:2em">📝</div>
+      <h2 style="margin:12px 0">퀴즈 완료!</h2>
+      <div class="summary-score">${quizScore}/${quizCards.length}</div>
+      <div style="font-size:1.5em;margin-bottom:8px">${pct}점</div>
+      <div class="summary-grade">${grade}</div>
+      <button class="btn btn-next" onclick="resetQuiz()" style="margin:8px">🔄 다시 풀기</button>
+    </div>
+  `;
+}
+
+// ===== REVIEW MODE =====
+function initReview() {
+  reviewCards = ALL_CARDS.filter((c, i) => reviewSet.has(i));
+  reviewIndex = 0;
+  isReviewFlipped = false;
+  showReviewCard();
+}
+
+function showReviewCard() {
+  const empty = document.getElementById('reviewEmpty');
+  const counter = document.getElementById('reviewCounter');
+  const cardEl = document.querySelector('#reviewMode .flashcard-container');
+
+  if (reviewCards.length === 0) {
+    empty.textContent = '🎉 복습 필요한 카드가 없습니다! 모두 암기 완료했어요.';
+    cardEl.classList.add('hidden');
+    counter.textContent = '';
+    document.querySelector('#reviewMode .know-controls').classList.add('hidden');
+    return;
+  }
+
+  empty.textContent = '';
+  cardEl.classList.remove('hidden');
+  document.querySelector('#reviewMode .know-controls').classList.remove('hidden');
+
+  const card = reviewCards[reviewIndex];
+  document.getElementById('reviewQuestion').textContent = card.q;
+  document.getElementById('reviewAnswer').textContent = card.a;
+  document.getElementById('reviewCat').textContent = card.cat;
+  counter.textContent = `복습 ${reviewIndex + 1} / ${reviewCards.length}`;
+
+  const rc = document.getElementById('reviewCard');
+  rc.classList.remove('flipped');
+  isReviewFlipped = false;
+}
+
+function flipReview() {
+  isReviewFlipped = !isReviewFlipped;
+  document.getElementById('reviewCard').classList.toggle('flipped', isReviewFlipped);
+}
+
+function nextReview() {
+  reviewIndex = (reviewIndex + 1) % Math.max(reviewCards.length, 1);
+  showReviewCard();
+}
+
+function prevReview() {
+  reviewIndex = (reviewIndex - 1 + Math.max(reviewCards.length, 1)) % Math.max(reviewCards.length, 1);
+  showReviewCard();
+}
+
+function markReviewKnown() {
+  const card = reviewCards[reviewIndex];
+  const idx = ALL_CARDS.indexOf(card);
+  knownSet.add(idx);
+  reviewSet.delete(idx);
+  saveProgress();
+  updateStats();
+  reviewCards = ALL_CARDS.filter((c, i) => reviewSet.has(i));
+  if (reviewIndex >= reviewCards.length) reviewIndex = Math.max(0, reviewCards.length - 1);
+  showReviewCard();
+}
+
+// ===== MODE SWITCHING =====
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach((t, i) => {
+    t.classList.toggle('active', ['flash','quiz','review'][i] === mode);
+  });
+  document.getElementById('flashMode').classList.toggle('hidden', mode !== 'flash');
+  document.getElementById('quizMode').classList.toggle('hidden', mode !== 'quiz');
+  document.getElementById('reviewMode').classList.toggle('hidden', mode !== 'review');
+
+  if (mode === 'quiz') initQuiz();
+  if (mode === 'review') initReview();
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', e => {
+  if (currentMode === 'flash') {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextCard(); }
+    if (e.key === 'ArrowLeft') prevCard();
+    if (e.key === 'Enter') flipCard();
+    if (e.key === 'k' || e.key === 'K') markKnown();
+    if (e.key === 'r' || e.key === 'R') markReview();
+  }
+});
+
+init();
+</script>
+</body>
+</html>
