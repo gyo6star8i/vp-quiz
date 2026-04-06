@@ -150,6 +150,9 @@
   <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
 </div>
 
+<!-- 북마크 배너 -->
+<div id="bookmarkBanner" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 16px;margin:0 0 10px 0;font-size:0.9rem;color:#555;line-height:1.6;"></div>
+
 <!-- Category filter -->
 <div class="categories" id="categoryBar"></div>
 
@@ -1136,11 +1139,63 @@ function saveProgress() {
   localStorage.setItem('userCards',    JSON.stringify(userCards));
 }
 
+// ===== 북마크 저장/복원 =====
+function saveBookmark() {
+  if (currentCards.length === 0) return;
+  const card = currentCards[currentIndex];
+  const bookmark = {
+    cat: currentCat,
+    cardId: card.id,
+    index: currentIndex,
+    savedAt: new Date().toLocaleString('ko-KR')
+  };
+  localStorage.setItem('bookmark', JSON.stringify(bookmark));
+}
+
+function loadBookmark() {
+  const raw = localStorage.getItem('bookmark');
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+function clearBookmark() {
+  localStorage.removeItem('bookmark');
+  const banner = document.getElementById('bookmarkBanner');
+  if (banner) banner.style.display = 'none';
+}
+
+function resumeFromBookmark() {
+  const bm = loadBookmark();
+  if (!bm) return;
+  clearBookmark();
+  // 카테고리 복원
+  currentCat = bm.cat;
+  buildCategoryBar();
+  filterCards(); // currentIndex는 0으로 초기화됨
+  // 카드 ID로 위치 찾기
+  const idx = currentCards.findIndex(c => c.id === bm.cardId);
+  currentIndex = idx >= 0 ? idx : (bm.index < currentCards.length ? bm.index : 0);
+  showCard();
+}
+
+function showBookmarkBanner() {
+  const bm = loadBookmark();
+  if (!bm) return;
+  const banner = document.getElementById('bookmarkBanner');
+  if (!banner) return;
+  const catLabel = bm.cat === 'all' ? '전체' : bm.cat;
+  banner.innerHTML = `📌 <strong>이어서 학습하기</strong> — ${catLabel} · ${bm.savedAt}
+    <button onclick="resumeFromBookmark()" style="margin-left:10px;padding:3px 10px;background:#e74c3c;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:0.85rem;">이어서 보기</button>
+    <button onclick="clearBookmark()" style="margin-left:6px;padding:3px 8px;background:transparent;color:#888;border:1px solid #ccc;border-radius:5px;cursor:pointer;font-size:0.8rem;">닫기</button>`;
+  banner.style.display = 'block';
+}
+
 // ===== 초기화 =====
 function init() {
   buildCategoryBar();
   filterCards();
   updateStats();
+  showBookmarkBanner();
 }
 
 function buildCategoryBar() {
@@ -1223,11 +1278,13 @@ function flipCard() {
 function nextCard() {
   currentIndex = (currentIndex + 1) % currentCards.length;
   showCard();
+  saveBookmark();
 }
 
 function prevCard() {
   currentIndex = (currentIndex - 1 + currentCards.length) % currentCards.length;
   showCard();
+  saveBookmark();
 }
 
 function shuffleCards() {
@@ -1246,8 +1303,9 @@ function markKnown() {
   reviewSet.delete(id);
   saveProgress();
   updateStats();
+  currentIndex = (currentIndex + 1) % currentCards.length;
   showCard();
-  nextCard();
+  saveBookmark();
 }
 
 function markReview() {
@@ -1257,8 +1315,9 @@ function markReview() {
   knownSet.delete(id);
   saveProgress();
   updateStats();
+  currentIndex = (currentIndex + 1) % currentCards.length;
   showCard();
-  nextCard();
+  saveBookmark();
 }
 
 function hideCurrentCard() {
