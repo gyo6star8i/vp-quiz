@@ -1353,6 +1353,24 @@ function initQuiz() {
   showQuizQuestion();
 }
 
+// 답변에서 핵심 키워드만 추출 (보기용 짧은 라벨)
+function extractAnswerLabel(a) {
+  // 【】 헤더 제거, 첫 번째 의미있는 줄 추출
+  const lines = a.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  for (const line of lines) {
+    const clean = line.replace(/^【.*?】/, '').replace(/^[①②③④⑤⑥⑦⑧\-•▸▴◦∘·]+\s*/, '').trim();
+    if (clean.length >= 6) return clean.length > 50 ? clean.substring(0, 50) + '…' : clean;
+  }
+  return a.substring(0, 50) + '…';
+}
+
+// 답변에서 퀴즈 본문용 발췌 (역방향 - 설명 보여주기)
+function extractAnswerExcerpt(a) {
+  const lines = a.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  // 앞 3줄 합치기 (헤더 포함 ok)
+  return lines.slice(0, 3).join('\n');
+}
+
 function showQuizQuestion() {
   const area = document.getElementById('quizArea');
   if (quizIndex >= quizCards.length) {
@@ -1363,23 +1381,51 @@ function showQuizQuestion() {
   quizAnswered = false;
 
   const allActive = getActiveCards();
-  const others = allActive.filter(c => c !== card).sort(() => Math.random() - 0.5).slice(0, 3);
+  const others = allActive.filter(c => c.id !== card.id).sort(() => Math.random() - 0.5).slice(0, 3);
   const options = [card, ...others].sort(() => Math.random() - 0.5);
+  const correctIdx = options.indexOf(card);
 
-  area.innerHTML = `
-    <div class="quiz-question"><strong>Q${quizIndex + 1}/${quizCards.length}.</strong> ${card.q}</div>
-    <div class="quiz-options">
-      ${options.map((opt, i) => `
-        <button class="quiz-option" onclick="checkAnswer(${i}, ${options.indexOf(card)}, this)">
-          ${String.fromCharCode(9312 + i)} ${opt.a.substring(0, 120)}${opt.a.length > 120 ? '...' : ''}
-        </button>
-      `).join('')}
-    </div>
-    <div id="quizResultMsg"></div>
-  `;
+  // 홀수 문제: 정방향 (질문→핵심 키워드 4개)
+  // 짝수 문제: 역방향 (설명→질문 제목 4개)
+  const isReverse = quizIndex % 2 === 1;
+
+  if (isReverse) {
+    // 역방향: "다음 내용이 설명하는 것은?" → 보기 = 질문 제목
+    const excerpt = extractAnswerExcerpt(card.a);
+    area.innerHTML = `
+      <div class="quiz-question">
+        <div style="font-size:0.8em;color:#888;margin-bottom:6px">Q${quizIndex + 1}/${quizCards.length} &nbsp;·&nbsp; 📋 다음 내용이 설명하는 것은?</div>
+        <div style="background:#f0f4ff;border-left:4px solid #4a90e2;padding:10px 14px;border-radius:6px;font-size:0.93em;white-space:pre-line;line-height:1.7;">${excerpt}</div>
+      </div>
+      <div class="quiz-options">
+        ${options.map((opt, i) => `
+          <button class="quiz-option" onclick="checkAnswer(${i}, ${correctIdx}, this, true, \`${card.a.replace(/`/g,'\'')}\`)">
+            ${String.fromCharCode(9312 + i)} ${opt.q}
+          </button>
+        `).join('')}
+      </div>
+      <div id="quizResultMsg"></div>
+    `;
+  } else {
+    // 정방향: "질문" → 보기 = 핵심 키워드 (첫 줄)
+    area.innerHTML = `
+      <div class="quiz-question">
+        <div style="font-size:0.8em;color:#888;margin-bottom:6px">Q${quizIndex + 1}/${quizCards.length} &nbsp;·&nbsp; ✏️ 다음에 해당하는 것은?</div>
+        <strong>${card.q}</strong>
+      </div>
+      <div class="quiz-options">
+        ${options.map((opt, i) => `
+          <button class="quiz-option" onclick="checkAnswer(${i}, ${correctIdx}, this, false, \`${card.a.replace(/`/g,'\'')}\`)">
+            ${String.fromCharCode(9312 + i)} ${extractAnswerLabel(opt.a)}
+          </button>
+        `).join('')}
+      </div>
+      <div id="quizResultMsg"></div>
+    `;
+  }
 }
 
-function checkAnswer(selected, correct, btn) {
+function checkAnswer(selected, correct, btn, isReverse, fullAnswer) {
   if (quizAnswered) return;
   quizAnswered = true;
   const options = document.querySelectorAll('.quiz-option');
@@ -1392,10 +1438,10 @@ function checkAnswer(selected, correct, btn) {
   if (selected === correct) {
     quizScore++;
     msg.className = 'quiz-result correct';
-    msg.textContent = '✅ 정답입니다!';
+    msg.innerHTML = `✅ 정답입니다!<div style="margin-top:10px;background:#f8f8f8;border-radius:8px;padding:10px 14px;font-size:0.85em;white-space:pre-line;line-height:1.7;text-align:left;color:#333;">${fullAnswer}</div>`;
   } else {
     msg.className = 'quiz-result wrong';
-    msg.textContent = '❌ 오답! 정답을 확인하세요.';
+    msg.innerHTML = `❌ 오답!<div style="margin-top:10px;background:#fff3f3;border-radius:8px;padding:10px 14px;font-size:0.85em;white-space:pre-line;line-height:1.7;text-align:left;color:#333;"><strong>✅ 정답 해설</strong>\n${fullAnswer}</div>`;
   }
 }
 
