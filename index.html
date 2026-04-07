@@ -1390,7 +1390,12 @@ function hideCurrentCard() {
   excludedIds.add(card.id);
   saveProgress();
   buildCategoryBar();
-  filterCards();
+  // filterCards()는 currentIndex를 0으로 초기화하므로 직접 재구성
+  const active = getActiveCards();
+  currentCards = currentCat === 'all' ? [...active] : active.filter(c => c.cat === currentCat);
+  if (currentIndex >= currentCards.length) currentIndex = Math.max(0, currentCards.length - 1);
+  isFlipped = false;
+  showCard();
   updateStats();
 }
 
