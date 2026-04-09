@@ -66,6 +66,20 @@
   /* Know/Review buttons */
   .know-controls { display: flex; gap: 10px; justify-content: center; width: 100%; max-width: 680px; margin-bottom: 10px; flex-wrap: wrap; }
 
+  /* Voice mode */
+  .voice-bar { background: #1e1e2e; border-radius: 14px; padding: 16px 20px; margin: 10px 0; width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 12px; }
+  .voice-bar.hidden { display: none; }
+  .voice-status { color: #a0aec0; font-size: 0.85em; text-align: center; min-height: 1.4em; }
+  .voice-status.speaking { color: #68d391; }
+  .voice-controls { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn-voice { background: #7e3af2; color: white; }
+  .btn-voice:hover { background: #6c2bd9; }
+  .btn-voice.active { background: #38a169; }
+  .btn-voice-pause { background: #e53e3e; color: white; }
+  .btn-voice-pause:hover { background: #c53030; }
+  .voice-speed { display: flex; align-items: center; gap: 8px; justify-content: center; font-size: 0.85em; color: #a0aec0; }
+  .voice-speed select { background: #2d2d44; color: white; border: 1px solid #4a5568; border-radius: 6px; padding: 4px 8px; font-size: 0.85em; }
+
   /* Mode tabs */
   .mode-tabs { display: flex; gap: 0; background: white; border-radius: 10px; padding: 4px; margin: 12px 16px; border: 1px solid #e2e8f0; }
   .mode-tab { flex: 1; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer; font-size: 0.85em; font-weight: 600; color: #718096; }
@@ -188,6 +202,34 @@
     <button class="btn btn-prev" onclick="prevCard()">◀ 이전</button>
     <button class="btn btn-shuffle" onclick="shuffleCards()">🔀 섞기</button>
     <button class="btn btn-next" onclick="nextCard()">다음 ▶</button>
+    <button class="btn btn-voice" id="voiceStartBtn" onclick="startVoiceMode()">🎧 음성모드</button>
+  </div>
+
+  <!-- 음성 모드 -->
+  <div class="voice-bar hidden" id="voiceBar">
+    <div class="voice-status" id="voiceStatus">🎧 음성 모드 대기 중</div>
+    <div class="voice-controls">
+      <button class="btn btn-voice-pause" id="voicePauseBtn" onclick="voicePause()" style="display:none;">⏸ 일시정지</button>
+      <button class="btn btn-voice-pause" id="voiceResumeBtn" onclick="voiceResume()" style="display:none;">▶ 계속</button>
+      <button class="btn btn-next" onclick="voiceSkip()">⏭ 다음으로</button>
+      <button class="btn btn-reset" onclick="stopVoiceMode()">⏹ 중지</button>
+    </div>
+    <div class="voice-speed">
+      🐢 속도:
+      <select id="voiceSpeed" onchange="updateVoiceSpeed()">
+        <option value="0.7">느리게</option>
+        <option value="0.9" selected>보통</option>
+        <option value="1.1">빠르게</option>
+        <option value="1.3">매우 빠르게</option>
+      </select>
+      &nbsp;⏱ 생각시간:
+      <select id="voiceThinkTime">
+        <option value="2000">2초</option>
+        <option value="4000" selected>4초</option>
+        <option value="6000">6초</option>
+        <option value="10000">10초</option>
+      </select>
+    </div>
   </div>
 </div>
 
@@ -1455,6 +1497,127 @@ function saveProgress() {
 }
 
 // ===== 북마크 저장/복원 =====
+// ===== 음성 모드 =====
+let voiceActive = false;
+let voicePaused = false;
+let voiceTimeout = null;
+
+function startVoiceMode() {
+  if (!window.speechSynthesis) {
+    alert('이 브라우저는 음성 기능을 지원하지 않습니다.\nChrome 또는 Safari를 사용해 주세요.');
+    return;
+  }
+  voiceActive = true;
+  voicePaused = false;
+  document.getElementById('voiceBar').classList.remove('hidden');
+  document.getElementById('voiceStartBtn').style.display = 'none';
+  document.getElementById('voicePauseBtn').style.display = '';
+  document.getElementById('voiceResumeBtn').style.display = 'none';
+  voicePlayCurrent();
+}
+
+function voicePlayCurrent() {
+  if (!voiceActive || voicePaused) return;
+  if (currentCards.length === 0) return;
+  const card = currentCards[currentIndex];
+  const thinkTime = parseInt(document.getElementById('voiceThinkTime').value);
+
+  // 카드 앞면으로
+  const fc = document.getElementById('flashcard');
+  fc.classList.remove('flipped');
+  isFlipped = false;
+
+  setVoiceStatus(`🔊 문제 읽는 중... (${currentIndex + 1}/${currentCards.length})`);
+  speak('문제. ' + card.q, () => {
+    if (!voiceActive || voicePaused) return;
+    setVoiceStatus(`⏱ 생각 중... ${thinkTime / 1000}초`);
+    voiceTimeout = setTimeout(() => {
+      if (!voiceActive || voicePaused) return;
+      // 카드 뒤집기
+      fc.classList.add('flipped');
+      isFlipped = true;
+      setVoiceStatus('🔊 정답 읽는 중...');
+      speak('정답. ' + card.a, () => {
+        if (!voiceActive || voicePaused) return;
+        setVoiceStatus('⏭ 다음 카드로...');
+        voiceTimeout = setTimeout(() => {
+          if (!voiceActive || voicePaused) return;
+          currentIndex = (currentIndex + 1) % currentCards.length;
+          showCard();
+          saveBookmark();
+          voicePlayCurrent();
+        }, 1500);
+      });
+    }, thinkTime);
+  });
+}
+
+function speak(text, callback) {
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'ko-KR';
+  utter.rate = parseFloat(document.getElementById('voiceSpeed').value);
+  utter.onend = callback;
+  utter.onerror = callback;
+  window.speechSynthesis.speak(utter);
+}
+
+function voicePause() {
+  voicePaused = true;
+  window.speechSynthesis.pause();
+  clearTimeout(voiceTimeout);
+  document.getElementById('voicePauseBtn').style.display = 'none';
+  document.getElementById('voiceResumeBtn').style.display = '';
+  setVoiceStatus('⏸ 일시정지됨');
+}
+
+function voiceResume() {
+  voicePaused = false;
+  document.getElementById('voicePauseBtn').style.display = '';
+  document.getElementById('voiceResumeBtn').style.display = 'none';
+  window.speechSynthesis.cancel();
+  voicePlayCurrent();
+}
+
+function voiceSkip() {
+  window.speechSynthesis.cancel();
+  clearTimeout(voiceTimeout);
+  if (voicePaused) {
+    voicePaused = false;
+    document.getElementById('voicePauseBtn').style.display = '';
+    document.getElementById('voiceResumeBtn').style.display = 'none';
+  }
+  currentIndex = (currentIndex + 1) % currentCards.length;
+  showCard();
+  saveBookmark();
+  voicePlayCurrent();
+}
+
+function stopVoiceMode() {
+  voiceActive = false;
+  voicePaused = false;
+  window.speechSynthesis.cancel();
+  clearTimeout(voiceTimeout);
+  document.getElementById('voiceBar').classList.add('hidden');
+  document.getElementById('voiceStartBtn').style.display = '';
+  setVoiceStatus('🎧 음성 모드 대기 중');
+}
+
+function updateVoiceSpeed() {
+  // 현재 재생 중이면 재시작
+  if (voiceActive && !voicePaused) {
+    window.speechSynthesis.cancel();
+    clearTimeout(voiceTimeout);
+    voicePlayCurrent();
+  }
+}
+
+function setVoiceStatus(msg) {
+  const el = document.getElementById('voiceStatus');
+  el.textContent = msg;
+  el.className = 'voice-status' + (msg.includes('읽는 중') ? ' speaking' : '');
+}
+
 function saveBookmark() {
   if (currentCards.length === 0) return;
   const card = currentCards[currentIndex];
@@ -1956,6 +2119,7 @@ function setMode(mode) {
   if (mode === 'quiz') initQuiz();
   if (mode === 'review') initReview();
   if (mode === 'manage') renderManage();
+  if (mode !== 'flash' && voiceActive) stopVoiceMode();
 }
 
 // Keyboard navigation
