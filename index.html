@@ -1593,14 +1593,61 @@ function voicePlayCurrent() {
 
 function speak(text, callback) {
   window.speechSynthesis.cancel();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = 'ko-KR';
-  utter.rate = parseFloat(document.getElementById('voiceSpeed').value);
-  const voice = getSelectedVoice();
-  if (voice) utter.voice = voice;
-  utter.onend = callback;
-  utter.onerror = callback;
-  window.speechSynthesis.speak(utter);
+
+  // 긴 텍스트를 문장 단위로 분할 (Chrome 15초 버그 방지)
+  const chunks = splitIntoChunks(text);
+  let idx = 0;
+
+  // Chrome keepalive: 10초마다 pause/resume으로 중단 방지
+  let keepAlive = setInterval(() => {
+    if (!voiceActive || voicePaused) return;
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.pause();
+      window.speechSynthesis.resume();
+    }
+  }, 10000);
+
+  function speakChunk() {
+    if (!voiceActive || voicePaused) { clearInterval(keepAlive); return; }
+    if (idx >= chunks.length) {
+      clearInterval(keepAlive);
+      callback();
+      return;
+    }
+    const utter = new SpeechSynthesisUtterance(chunks[idx++]);
+    utter.lang = 'ko-KR';
+    utter.rate = parseFloat(document.getElementById('voiceSpeed').value);
+    const voice = getSelectedVoice();
+    if (voice) utter.voice = voice;
+    utter.onend = speakChunk;
+    utter.onerror = (e) => {
+      // interrupted는 cancel()에 의한 정상 중단 — 무시
+      if (e.error === 'interrupted' || e.error === 'canceled') return;
+      clearInterval(keepAlive);
+      // 오류 시 잠시 후 다음 청크 시도 (건너뛰지 않음)
+      voiceTimeout = setTimeout(speakChunk, 500);
+    };
+    window.speechSynthesis.speak(utter);
+  }
+
+  speakChunk();
+}
+
+function splitIntoChunks(text) {
+  // 줄바꿈과 문장 부호(. ! ? ①②...) 기준으로 분할, 최대 100자
+  const raw = text.replace(/\n/g, '. ').split(/(?<=[.!?。])\s+|(?<=\d+[.)】])\s*/);
+  const result = [];
+  let cur = '';
+  for (const part of raw) {
+    if ((cur + part).length > 100) {
+      if (cur.trim()) result.push(cur.trim());
+      cur = part;
+    } else {
+      cur += (cur ? ' ' : '') + part;
+    }
+  }
+  if (cur.trim()) result.push(cur.trim());
+  return result.length ? result : [text];
 }
 
 function voicePause() {
