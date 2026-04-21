@@ -182,7 +182,16 @@
 
 <!-- Flash card mode -->
 <div class="card-area" id="flashMode">
-  <div class="card-counter" id="cardCounter"></div>
+  <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:4px;">
+    <div class="card-counter" id="cardCounter" style="margin-bottom:0;"></div>
+    <div style="display:flex; align-items:center; gap:4px;">
+      <input type="number" id="jumpInput" min="1" placeholder="번호"
+        style="width:62px; padding:3px 6px; border:1px solid #ccc; border-radius:6px; font-size:0.85rem; text-align:center;"
+        onkeydown="if(event.key==='Enter') jumpToCard()">
+      <button onclick="jumpToCard()"
+        style="padding:3px 10px; background:#2e86c1; color:#fff; border:none; border-radius:6px; font-size:0.82rem; cursor:pointer;">이동</button>
+    </div>
+  </div>
   <div class="flashcard-container" onclick="flipCard()">
     <div class="flashcard" id="flashcard">
       <div class="card-face card-front">
@@ -2639,6 +2648,22 @@ function nextCard() {
   currentIndex = (currentIndex + 1) % currentCards.length;
   showCard();
   saveBookmark();
+}
+
+function jumpToCard() {
+  const input = document.getElementById('jumpInput');
+  const n = parseInt(input.value);
+  if (isNaN(n) || n < 1 || n > currentCards.length) {
+    input.style.borderColor = '#e74c3c';
+    setTimeout(() => input.style.borderColor = '#ccc', 1000);
+    return;
+  }
+  currentIndex = n - 1;
+  showCard();
+  saveBookmark();
+  input.value = '';
+  input.style.borderColor = '#2e86c1';
+  setTimeout(() => input.style.borderColor = '#ccc', 800);
 }
 
 function prevCard() {
