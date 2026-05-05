@@ -2307,11 +2307,29 @@ function getSelectedVoice() {
   return koVoices[idx];
 }
 
+let wakeLock = null;
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch (e) {
+      // Wake Lock 미지원 또는 권한 거부 시 무시
+    }
+  }
+}
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release();
+    wakeLock = null;
+  }
+}
+
 function startVoiceMode() {
   if (!window.speechSynthesis) {
     alert('이 브라우저는 음성 기능을 지원하지 않습니다.\nChrome 또는 Safari를 사용해 주세요.');
     return;
   }
+  requestWakeLock();
   voiceActive = true;
   voicePaused = false;
   document.getElementById('voiceBar').classList.remove('hidden');
@@ -2448,6 +2466,7 @@ function voiceSkip() {
 }
 
 function stopVoiceMode() {
+  releaseWakeLock();
   voiceActive = false;
   voicePaused = false;
   window.speechSynthesis.cancel();
