@@ -139,6 +139,22 @@
 
   /* 완료 표시 */
   .card-status { position: absolute; top: 12px; right: 14px; font-size: 1.2em; }
+
+  /* 검색 */
+  .search-wrap { padding: 10px 16px; background: white; border-bottom: 1px solid #e2e8f0; position: relative; }
+  .search-input-row { display: flex; gap: 8px; align-items: center; }
+  .search-input { flex: 1; padding: 9px 14px 9px 36px; border: 2px solid #e2e8f0; border-radius: 24px; font-size: 0.9em; font-family: inherit; transition: border-color 0.2s; background: #f7fafc; }
+  .search-input:focus { outline: none; border-color: #1a56db; background: white; }
+  .search-icon { position: absolute; left: 28px; top: 50%; transform: translateY(-50%); font-size: 1em; pointer-events: none; color: #a0aec0; }
+  .search-clear { background: none; border: none; cursor: pointer; font-size: 1.1em; color: #a0aec0; padding: 0 4px; }
+  .search-results { position: absolute; left: 16px; right: 16px; top: calc(100% - 2px); background: white; border: 2px solid #1a56db; border-top: none; border-radius: 0 0 14px 14px; z-index: 100; max-height: 320px; overflow-y: auto; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+  .search-result-item { display: flex; align-items: center; gap: 8px; padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
+  .search-result-item:last-child { border-bottom: none; }
+  .search-result-item:hover { background: #ebf8ff; }
+  .search-num { font-size: 0.75em; background: #e2e8f0; color: #4a5568; border-radius: 8px; padding: 2px 7px; font-weight: 700; flex-shrink: 0; }
+  .search-q { font-size: 0.87em; color: #2d3748; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .search-empty { padding: 16px; text-align: center; color: #a0aec0; font-size: 0.88em; }
+  mark { background: #fef08a; border-radius: 3px; padding: 0 2px; }
 </style>
 </head>
 <body>
@@ -179,6 +195,16 @@
 
 <!-- Category filter -->
 <div class="categories" id="categoryBar"></div>
+
+<!-- 검색 -->
+<div class="search-wrap" id="searchWrap">
+  <div class="search-input-row" style="position:relative;">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-input" id="searchInput" placeholder="키워드로 문항 검색..." oninput="onSearchInput()" onkeydown="onSearchKey(event)" autocomplete="off">
+    <button class="search-clear" id="searchClearBtn" onclick="clearSearch()" style="display:none;">✕</button>
+  </div>
+  <div class="search-results hidden" id="searchResults"></div>
+</div>
 
 <!-- Flash card mode -->
 <div class="card-area" id="flashMode">
@@ -2622,6 +2648,102 @@ function jumpToCard() {
   input.style.borderColor = '#2e86c1';
   setTimeout(() => input.style.borderColor = '#ccc', 800);
 }
+
+// ===== 검색 기능 =====
+let searchIndex = -1;
+
+function onSearchInput() {
+  const q = document.getElementById('searchInput').value.trim();
+  const clearBtn = document.getElementById('searchClearBtn');
+  clearBtn.style.display = q ? '' : 'none';
+  if (!q) { closeSearchResults(); return; }
+  renderSearchResults(q);
+}
+
+function renderSearchResults(keyword) {
+  const allCards = currentCards; // 현재 카테고리 필터 적용된 카드
+  const kw = keyword.toLowerCase();
+  const matched = [];
+  allCards.forEach((card, idx) => {
+    if ((card.q && card.q.toLowerCase().includes(kw)) ||
+        (card.a && card.a.toLowerCase().includes(kw))) {
+      matched.push({ card, idx });
+    }
+  });
+
+  const box = document.getElementById('searchResults');
+  box.classList.remove('hidden');
+  searchIndex = -1;
+
+  if (matched.length === 0) {
+    box.innerHTML = '<div class="search-empty">검색 결과가 없습니다.</div>';
+    return;
+  }
+
+  box.innerHTML = matched.slice(0, 30).map(({ card, idx }) => {
+    const num = idx + 1;
+    const qHighlight = highlight(card.q, keyword);
+    return `<div class="search-result-item" onclick="goToSearchResult(${idx})">
+      <span class="search-num">${num}번</span>
+      <span class="cat-tag">${card.cat || ''}</span>
+      <span class="search-q">${qHighlight}</span>
+    </div>`;
+  }).join('');
+  if (matched.length > 30) {
+    box.innerHTML += `<div class="search-empty">+${matched.length - 30}개 더 있음 (검색어를 더 입력하세요)</div>`;
+  }
+}
+
+function highlight(text, keyword) {
+  if (!text) return '';
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark>$1</mark>');
+}
+
+function goToSearchResult(idx) {
+  currentIndex = idx;
+  setMode('flash');
+  showCard();
+  saveBookmark();
+  clearSearch();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function closeSearchResults() {
+  document.getElementById('searchResults').classList.add('hidden');
+  searchIndex = -1;
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClearBtn').style.display = 'none';
+  closeSearchResults();
+}
+
+function onSearchKey(e) {
+  const box = document.getElementById('searchResults');
+  const items = box.querySelectorAll('.search-result-item');
+  if (e.key === 'ArrowDown') {
+    searchIndex = Math.min(searchIndex + 1, items.length - 1);
+    items.forEach((el, i) => el.style.background = i === searchIndex ? '#ebf8ff' : '');
+    e.preventDefault();
+  } else if (e.key === 'ArrowUp') {
+    searchIndex = Math.max(searchIndex - 1, 0);
+    items.forEach((el, i) => el.style.background = i === searchIndex ? '#ebf8ff' : '');
+    e.preventDefault();
+  } else if (e.key === 'Enter' && searchIndex >= 0) {
+    items[searchIndex]?.click();
+  } else if (e.key === 'Escape') {
+    clearSearch();
+  }
+}
+
+// 검색창 외부 클릭 시 결과 닫기
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('searchWrap').contains(e.target)) {
+    closeSearchResults();
+  }
+});
 
 
 function prevCard() {
