@@ -140,6 +140,52 @@
   /* 완료 표시 */
   .card-status { position: absolute; top: 12px; right: 14px; font-size: 1.2em; }
 
+  /* ===== 수고 페이지 ===== */
+  #congratsPage {
+    display: none;
+    position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    overflow-y: auto;
+  }
+  #congratsPage .glow-circle {
+    position: fixed; border-radius: 50%; filter: blur(80px); opacity: 0.15; z-index: 0;
+    animation: cgPulse 6s ease-in-out infinite;
+  }
+  #congratsPage .glow-1 { width: 400px; height: 400px; background: #7e3af2; top: -100px; left: -100px; }
+  #congratsPage .glow-2 { width: 300px; height: 300px; background: #1a56db; bottom: -80px; right: -80px; animation-delay: 3s; }
+  @keyframes cgPulse { 0%,100%{transform:scale(1);opacity:.15} 50%{transform:scale(1.2);opacity:.25} }
+  #congratsPage .stars, #congratsPage .confetti-wrap { position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+  #congratsPage .star { position:absolute; background:white; border-radius:50%; animation:cgTwinkle var(--dur) ease-in-out infinite; opacity:0; }
+  @keyframes cgTwinkle { 0%,100%{opacity:0;transform:scale(.5)} 50%{opacity:1;transform:scale(1)} }
+  #congratsPage .confetti { position:absolute; border-radius:2px; animation:cgFall var(--fall-dur) linear infinite; opacity:.8; }
+  @keyframes cgFall { 0%{transform:translateY(-20px) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+  #congratsPage .cg-container {
+    position: relative; z-index: 10; text-align: center;
+    padding: 60px 24px 40px; max-width: 600px; margin: 0 auto;
+  }
+  #congratsPage .cg-badge {
+    display:inline-block; background:linear-gradient(135deg,#f6d365,#fda085); color:white;
+    font-size:.82em; font-weight:700; padding:6px 18px; border-radius:20px; margin-bottom:20px;
+    letter-spacing:.05em; box-shadow:0 4px 15px rgba(253,160,133,.4);
+  }
+  #congratsPage .cg-emoji { font-size:5em; display:block; margin-bottom:16px; animation:cgBounce 2s ease-in-out infinite; }
+  @keyframes cgBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+  #congratsPage h1 { font-size:2.4em; color:#fff; font-weight:800; line-height:1.3; margin-bottom:12px; text-shadow:0 2px 20px rgba(255,255,255,.3); }
+  #congratsPage h1 span { background:linear-gradient(135deg,#f6d365,#fda085); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  #congratsPage .cg-subtitle { font-size:1.1em; color:#a0c4ff; margin-bottom:32px; line-height:1.7; }
+  #congratsPage .cg-card {
+    background:rgba(255,255,255,.08); backdrop-filter:blur(16px);
+    border:1px solid rgba(255,255,255,.15); border-radius:20px;
+    padding:28px 32px; margin-bottom:24px; box-shadow:0 8px 32px rgba(0,0,0,.3);
+  }
+  #congratsPage .cg-card p { color:#e2e8f0; font-size:1em; line-height:1.9; }
+  #congratsPage .cg-card p strong { color:#f6d365; }
+  #congratsPage .cg-divider { width:60px; height:3px; background:linear-gradient(90deg,#f6d365,#fda085); border-radius:2px; margin:20px auto; }
+  #congratsPage .cg-wish { font-size:1.25em; font-weight:700; color:#fff; margin-bottom:8px; }
+  #congratsPage .cg-wish-sub { font-size:.92em; color:#90cdf4; }
+  #congratsPage .cg-footer { margin-top:28px; font-size:.8em; color:rgba(255,255,255,.4); }
+
   /* 검색 */
   .search-wrap { padding: 10px 16px; background: white; border-bottom: 1px solid #e2e8f0; position: relative; }
   .search-input-row { display: flex; gap: 8px; align-items: center; }
@@ -158,6 +204,27 @@
 </style>
 </head>
 <body>
+
+<!-- ===== 수고 페이지 (시험 후 1개월 표시) ===== -->
+<div id="congratsPage">
+  <div class="glow-circle glow-1"></div>
+  <div class="glow-circle glow-2"></div>
+  <div class="stars" id="cgStars"></div>
+  <div class="confetti-wrap" id="cgConfetti"></div>
+  <div class="cg-container">
+    <div class="cg-badge">🎓 경북교육청 교감 자격연수 면접</div>
+    <span class="cg-emoji">🌟</span>
+    <h1>수고 많으셨습니다!<br><span>정말 대단하세요.</span></h1>
+    <p class="cg-subtitle">오랜 시간 준비하신 면접이 드디어 끝났습니다.<br>그 열정과 노력, 진심으로 응원합니다.</p>
+    <div class="cg-card">
+      <p>밤늦도록 카드를 넘기며<br>스스로를 갈고닦으셨던 모든 순간들이<br><strong>오늘 면접장에서 빛이 되었을 겁니다.</strong></p>
+      <div class="cg-divider"></div>
+      <p class="cg-wish">🍀 합격을 진심으로 기원합니다!</p>
+      <p class="cg-wish-sub">좋은 결과가 함께하길 바랍니다 ✨</p>
+    </div>
+    <p class="cg-footer">교감 면접 플래시퀴즈 · 경북교육청<br>문의: 이희명 (gyo6@kakao.com)</p>
+  </div>
+</div>
 
 <div class="header">
   <h1>📚 교감 면접 플래시퀴즈</h1>
@@ -2255,6 +2322,36 @@ const ALL_CARDS = [
     src: "2026학년도 교원 도전! 열정 성취 교육감 인증제 프로그램(경상북도교육청)"
   }
 ];
+
+// ===== 수고 페이지 시간 제어 =====
+// 시험 후: 2026-05-09 08:30 ~ 2026-06-09 08:30 → 수고 페이지 표시
+(function() {
+  const now = new Date();
+  const showFrom = new Date('2026-05-09T08:30:00');
+  const showUntil = new Date('2026-06-09T08:30:00');
+  const page = document.getElementById('congratsPage');
+  if (now >= showFrom && now < showUntil) {
+    page.style.display = 'block';
+    // 별 생성
+    const starsEl = document.getElementById('cgStars');
+    for (let i = 0; i < 80; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const size = Math.random() * 3 + 1;
+      s.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--dur:${Math.random()*3+2}s;animation-delay:${Math.random()*4}s`;
+      starsEl.appendChild(s);
+    }
+    // 꽃가루 생성
+    const confettiEl = document.getElementById('cgConfetti');
+    const colors = ['#f6d365','#fda085','#84fab0','#8fd3f4','#a18cd1','#fbc2eb','#ff9a9e'];
+    for (let i = 0; i < 40; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.cssText = `left:${Math.random()*100}%;background:${colors[Math.floor(Math.random()*colors.length)]};--fall-dur:${Math.random()*5+4}s;animation-delay:${Math.random()*6}s;width:${Math.random()*8+5}px;height:${Math.random()*8+5}px;border-radius:${Math.random()>.5?'50%':'2px'}`;
+      confettiEl.appendChild(c);
+    }
+  }
+})();
 
 // ===== 카드 ID 부여 =====
 ALL_CARDS.forEach((card, i) => { card.id = 'b' + i; });
