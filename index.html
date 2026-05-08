@@ -240,12 +240,16 @@
   <div class="mode-tab" onclick="setMode('manage')">⚙️ 관리</div>
 </div>
 
-<!-- 법령 관계도 바로가기 -->
-<div style="text-align:center; margin: 8px 0 4px 0;">
+<!-- 법령 관계도 바로가기 + PDF 출력 -->
+<div style="text-align:center; margin: 8px 0 4px 0; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; padding:0 12px;">
   <a href="https://gyo6star8i.github.io/gb-raw/" target="_blank" rel="noopener noreferrer"
      style="display:inline-block; padding:8px 22px; background:linear-gradient(135deg,#1a5276,#2e86c1); color:#fff; border-radius:20px; font-size:0.88rem; font-weight:bold; text-decoration:none; box-shadow:0 2px 6px rgba(0,0,0,0.2); letter-spacing:0.03em;">
     📜 법령 관계도 바로가기
   </a>
+  <button onclick="printCards()"
+     style="padding:8px 22px; background:linear-gradient(135deg,#276749,#38a169); color:#fff; border:none; border-radius:20px; font-size:0.88rem; font-weight:bold; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.2); letter-spacing:0.03em;">
+    🖨️ A4 PDF 출력
+  </button>
 </div>
 
 <!-- Stats -->
@@ -2692,6 +2696,79 @@ function nextCard() {
   currentIndex = (currentIndex + 1) % currentCards.length;
   showCard();
   saveBookmark();
+}
+
+// ===== A4 PDF 출력 =====
+function printCards() {
+  const cards = currentCards;
+  if (!cards.length) { alert('출력할 카드가 없습니다.'); return; }
+
+  const catLabel = currentCat === 'all' ? '전체' : currentCat;
+
+  const rows = cards.map((card, i) => `
+    <div class="pc">
+      <div class="pnum">${i + 1}</div>
+      <div class="pcontent">
+        <div class="pq">${escapeHtml(card.q)}</div>
+        <div class="pa">${escapeHtml(card.a).replace(/\n/g, '<br>')}</div>
+        ${card.src ? `<div class="psrc">[${escapeHtml(card.src)}]</div>` : ''}
+      </div>
+    </div>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>교감 면접 플래시퀴즈 - ${catLabel}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; font-size: 8.5pt; color: #111; background: white; }
+  h2 { font-size: 11pt; text-align: center; margin: 6mm 0 4mm; color: #1a56db; }
+  .subtitle { text-align: center; font-size: 7.5pt; color: #666; margin-bottom: 4mm; }
+  .grid { columns: 2; column-gap: 4mm; }
+  .pc {
+    break-inside: avoid;
+    display: flex;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    margin-bottom: 2.5mm;
+    background: #fff;
+    overflow: hidden;
+  }
+  .pnum {
+    min-width: 7mm; width: 7mm;
+    background: #1a56db;
+    color: white;
+    font-size: 7pt;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .pcontent { padding: 2mm 2.5mm; flex: 1; min-width: 0; }
+  .pq { font-weight: 700; font-size: 8pt; color: #1a3a6b; margin-bottom: 1.5mm; line-height: 1.4; }
+  .pa { font-size: 7.5pt; color: #222; line-height: 1.45; white-space: pre-wrap; }
+  .psrc { font-size: 6.5pt; color: #888; margin-top: 1.5mm; font-style: italic; }
+  @page { size: A4; margin: 12mm 10mm; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+<h2>📚 교감 면접 플래시퀴즈 — ${catLabel} (${cards.length}문항)</h2>
+<p class="subtitle">출력일: ${new Date().toLocaleDateString('ko-KR')} · 경북교육청 · 문의: gyo6@kakao.com</p>
+<div class="grid">${rows}</div>
+<script>window.onload = function(){ window.print(); }<\/script>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function jumpToCard() {
